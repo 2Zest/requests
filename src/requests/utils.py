@@ -986,9 +986,9 @@ def parse_header_links(value: str) -> list[dict[str, str]]:
 
         link: dict[str, str] = {"url": url.strip("<> '\"")}
 
-        for param in params.split(";"):
+        for param in _split_header_parameters(params):
             try:
-                key, value = param.split("=")
+                key, value = param.split("=", 1)
             except ValueError:
                 break
 
@@ -997,6 +997,28 @@ def parse_header_links(value: str) -> list[dict[str, str]]:
         links.append(link)
 
     return links
+
+
+def _split_header_parameters(value: str) -> list[str]:
+    """Split Link header parameters on semicolons outside quoted values."""
+    parameters: list[str] = []
+    start = 0
+    quoted = False
+    escaped = False
+
+    for index, character in enumerate(value):
+        if quoted and character == "\\" and not escaped:
+            escaped = True
+            continue
+        if character == '"' and not escaped:
+            quoted = not quoted
+        elif character == ";" and not quoted:
+            parameters.append(value[start:index])
+            start = index + 1
+        escaped = False
+
+    parameters.append(value[start:])
+    return parameters
 
 
 # Null bytes; no need to recreate these on each call to guess_json_utf
