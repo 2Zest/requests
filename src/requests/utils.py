@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import codecs
 import contextlib
+import fnmatch
 import io
 import os
 import re
@@ -87,6 +88,11 @@ DEFAULT_PORTS: Final = {"http": 80, "https": 443}
 _KT = TypeVar("_KT")
 _VT = TypeVar("_VT")
 
+
+def _proxy_bypass_registry_match(host: str, pattern: str) -> bool:
+    """Match a Windows ProxyOverride entry without matching a suffix accidentally."""
+    return fnmatch.fnmatchcase(host.casefold(), pattern.casefold())
+
 # Ensure that ', ' is used to preserve previous delimiter behavior.
 DEFAULT_ACCEPT_ENCODING: Final = ", ".join(
     re.split(r",\s*", make_headers(accept_encoding=True)["accept-encoding"])
@@ -127,10 +133,7 @@ if sys.platform == "win32":
             if test == "<local>":
                 if "." not in host:
                     return True
-            test = test.replace(".", r"\.")  # mask dots
-            test = test.replace("*", r".*")  # change glob sequence
-            test = test.replace("?", r".")  # change glob char
-            if re.match(test, host, re.I):
+            if _proxy_bypass_registry_match(host, test):
                 return True
         return False
 

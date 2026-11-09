@@ -15,6 +15,7 @@ from requests.cookies import RequestsCookieJar
 from requests.structures import CaseInsensitiveDict
 from requests.utils import (
     _parse_content_type_header,
+    _proxy_bypass_registry_match,
     add_dict_to_cookiejar,
     address_in_network,
     dotted_netmask,
@@ -865,6 +866,20 @@ def test_should_bypass_proxies_no_proxy_domain_boundary(url, expected):
     """
     no_proxy = "localhost, anotherdomain.com, newdomain.com:1234, .d.o.t"
     assert should_bypass_proxies(url, no_proxy=no_proxy) == expected
+
+
+@pytest.mark.parametrize(
+    "host, pattern, expected",
+    (
+        ("google.com", "google.com", True),
+        ("GOOGLE.COM", "google.com", True),
+        ("google.com.evil.com", "google.com", False),
+        ("api.example.com", "*.example.com", True),
+        ("example.com", "*.example.com", False),
+    ),
+)
+def test_proxy_bypass_registry_match_respects_host_boundaries(host, pattern, expected):
+    assert _proxy_bypass_registry_match(host, pattern) is expected
 
 
 @pytest.mark.skipif(os.name != "nt", reason="Test only on Windows")
